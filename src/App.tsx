@@ -1,16 +1,12 @@
 import { useState } from "react";
 import random from "random";
-import {
-  IconDice1,
-  IconDice2,
-  IconDice3,
-  IconDice4,
-  IconDice5,
-  IconDice6,
-} from "@tabler/icons-react";
+import { Die } from "./die";
+import { NumberButton } from "./number_button";
 
 export interface State {
   lastRoll: [number, number] | null;
+  readyToRoll: boolean;
+  selected: string[];
   top: number[];
   topTaken: boolean[];
   bottom: number[];
@@ -18,8 +14,19 @@ export interface State {
   count: number;
 }
 
+export interface Selected {
+  row: "top" | "bottom";
+  col: number;
+}
+
+function selectKey(s: Selected): string {
+  return `${s.row}-${s.col}`;
+}
+
 const initialState: State = {
   lastRoll: null,
+  readyToRoll: true,
+  selected: [],
   top: [1, 2, 3, 4, 5, 6, 7, 8, 9],
   topTaken: [false, true, false, false, false, false, false, false, false],
   bottom: [9, 8, 7, 6, 5, 4, 3, 2, 1],
@@ -27,49 +34,9 @@ const initialState: State = {
   count: 0,
 };
 
-export interface DieProps {
-  value: number;
+function canSelect(): boolean {
+  return true;
 }
-
-export const Die = (props: DieProps) => {
-  switch (props.value) {
-    case 1:
-      return <IconDice1 />;
-    case 2:
-      return <IconDice2 />;
-    case 3:
-      return <IconDice3 />;
-    case 4:
-      return <IconDice4 />;
-    case 5:
-      return <IconDice5 />;
-    case 6:
-      return <IconDice6 />;
-  }
-  return null;
-};
-
-export interface NumberButtonProps {
-  value: number;
-  taken: boolean;
-}
-
-export const NumberButton = (props: NumberButtonProps) => {
-  return (
-    <div
-      style={{
-        display: "flex",
-        width: "5em",
-        height: "5em",
-        border: "2px solid green",
-        color: props.taken ? "#444" : "white",
-        background: props.taken ? "black" : "darkgreen",
-      }}
-    >
-      <span style={{ fontSize: "200%", margin: "auto" }}>{props.value}</span>
-    </div>
-  );
-};
 
 function App() {
   const [state, setState] = useState(initialState);
@@ -89,22 +56,57 @@ function App() {
         )}
         <div id="numbers">
           <div id="top_numbers" style={{ display: "flex" }}>
-            {state.top.map((value, index) => (
-              <NumberButton value={value} taken={state.topTaken[index]} />
-            ))}
+            {state.top.map((value, index) => {
+              const me: Selected = { row: "top", col: index };
+              return (
+                <NumberButton
+                  key={`top-${index}`}
+                  value={value}
+                  taken={state.topTaken[index]}
+                  selected={state.selected.indexOf(selectKey(me)) != -1}
+                  toggle={() => {
+                    console.log("Clicked on ", me);
+                    if (canSelect()) {
+                      const key = selectKey(me);
+                      console.log("Previously selected", state.selected);
+                      let nextSelected = [...state.selected];
+                      if (nextSelected.indexOf(key) == -1) {
+                        nextSelected = [...state.selected, key];
+                      }
+                      console.log("Next Selected should be", nextSelected);
+                      setState((s) => ({
+                        ...s,
+                        selected: nextSelected,
+                      }));
+                    }
+                  }}
+                />
+              );
+            })}
           </div>
           <div id="bottom_numbers" style={{ display: "flex" }}>
             {state.bottom.map((value, index) => (
-              <NumberButton value={value} taken={state.bottomTaken[index]} />
+              <NumberButton
+                key={`bottom-${index}`}
+                value={value}
+                taken={state.bottomTaken[index]}
+                selected={false}
+                toggle={() => {}}
+              />
             ))}
           </div>
         </div>
         <div>
           <button
+            disabled={!state.readyToRoll}
             onClick={() => {
               const roll1 = random.int(1, 6);
               const roll2 = random.int(1, 6);
-              setState((s) => ({ ...s, lastRoll: [roll1, roll2] }));
+              setState((s) => ({
+                ...s,
+                readyToRoll: false,
+                lastRoll: [roll1, roll2],
+              }));
             }}
           >
             Roll Die
